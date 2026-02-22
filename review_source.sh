@@ -51,13 +51,68 @@ for REPO_URL in "$@"; do
   common_structure() {
     local f="$1"
     echo "# $REPO_NAME 리뷰 [$(date)]" > "$f"
-    echo "## 1. 구조 다이어그램" >> "$f"
+    echo "" >> "$f"
+    echo "**저장소:** $REPO_URL" >> "$f"
+    echo "" >> "$f"
+
+    # 1. 개요: README.md 있으면 내용 정리하여 추가
+    readme_file=""
+    for r in README.md README Readme.md readme.md; do
+      [ -f "$r" ] && { readme_file="$r"; break; }
+    done
+    if [ -n "$readme_file" ]; then
+      echo "## 1. 개요" >> "$f"
+      echo "" >> "$f"
+      # README 본문만 (앞쪽 200줄 제한, 과도한 양 방지)
+      head -200 "$readme_file" >> "$f" 2>/dev/null || cat "$readme_file" >> "$f"
+      echo "" >> "$f"
+    fi
+
+    echo "## 2. 구조 다이어그램" >> "$f"
     tree -L 3 -I 'node_modules|.git|review_*' >> "$f" 2>/dev/null || find . -maxdepth 3 -not -path '*/node_modules/*' -not -path '*/.git/*' | head -80 >> "$f"
+    echo "" >> "$f"
+    echo "### 주요 경로 설명" >> "$f"
+    for src in $(find . \( -name "*.py" -o -name "*.js" -o -name "*.html" -o -name "*.go" -o -name "Dockerfile" -o -name "setup.sh" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | sort | head -50); do
+      [ -f "$src" ] || continue
+      desc=$(file_one_line_desc "$src")
+      if [ -n "$desc" ]; then
+        echo "- **\`${src#./}\`** — $desc" >> "$f"
+      else
+        echo "- **\`${src#./}\`**" >> "$f"
+      fi
+    done
     echo "" >> "$f"
     echo "## 구성 요소" >> "$f"
     echo "- FE: $(find . \( -name "*.jsx" -o -name "*.tsx" -o -name "*.vue" -o -name "*.html" \) 2>/dev/null | wc -l | tr -d ' ') 파일" >> "$f"
     echo "- BE: $(find . \( -name "*.py" -o -name "*.js" -o -name "*.go" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d ' ') 파일" >> "$f"
     echo "- DB/설치: $(find . -name "*.sql" -o -name "Dockerfile" -o -name "package*.json" 2>/dev/null | wc -l | tr -d ' ') 파일" >> "$f"
+  }
+
+  # 파일 첫 주석/독스트링에서 한 줄 설명 추출 (최대 80자)
+  file_one_line_desc() {
+    local path="$1"
+    [ ! -f "$path" ] && return
+    local line=""
+    case "$path" in
+      *.py)
+        line=$(head -25 "$path" 2>/dev/null | grep -m1 -E '^#|^"""' | sed 's/^# *//;s/^""" *//;s/ *"""$//')
+        ;;
+      *.js|*.jsx|*.ts|*.tsx|*.vue)
+        line=$(head -25 "$path" 2>/dev/null | grep -m1 -E '^[[:space:]]*//' | sed 's/^[[:space:]]*\/\/[[:space:]]*//')
+        ;;
+      *.go)
+        line=$(head -20 "$path" 2>/dev/null | grep -m1 -E '^//' | sed 's/^\/\/ *//')
+        ;;
+      *.html)
+        line=$(grep -m1 -oE '<title>[^<]+</title>' "$path" 2>/dev/null | sed 's/<[^>]*>//g;s/^[[:space:]]*//;s/[[:space:]]*$//')
+        ;;
+      Dockerfile|*.sh)
+        line=$(head -10 "$path" 2>/dev/null | grep -m1 -E '^#' | sed 's/^# *//')
+        ;;
+    esac
+    if [ -n "$line" ]; then
+      echo "$line" | tr -d '\n\r' | head -c 80
+    fi
   }
 
   # 구조 문자열 생성 (AI 프롬프트·로컬 분석용)
@@ -87,6 +142,7 @@ for REPO_URL in "$@"; do
     while IFS= read -r f; do
       [ -f "$f" ] || continue
       echo "- **\`$f\`**" >> "$md_file"
+      desc=$(file_one_line_desc "$f"); [ -n "$desc" ] && echo "  - 설명: $desc" >> "$md_file"
       case "$f" in
         *.html)
           grep -nE '<script|</script>|router\.|path\(|route\(' "$f" 2>/dev/null | head -15 | sed 's/^/  - /' >> "$md_file" || true
@@ -105,6 +161,7 @@ for REPO_URL in "$@"; do
     while IFS= read -r f; do
       [ -f "$f" ] || continue
       echo "- **\`$f\`**" >> "$md_file"
+      desc=$(file_one_line_desc "$f"); [ -n "$desc" ] && echo "  - 설명: $desc" >> "$md_file"
       case "$f" in
         *.py)
           grep -nE '^(def |class |async def )' "$f" 2>/dev/null | sed 's/^/  - /' >> "$md_file" || true
@@ -126,6 +183,7 @@ for REPO_URL in "$@"; do
     while IFS= read -r f; do
       [ -f "$f" ] || continue
       echo "- **\`$f\`** ($(wc -l < "$f" 2>/dev/null | tr -d ' ') 줄)" >> "$md_file"
+      desc=$(file_one_line_desc "$f"); [ -n "$desc" ] && echo "  - 설명: $desc" >> "$md_file"
     done < <(find . \( -name "*.sql" -o -name "Dockerfile" -o -name "package*.json" -o -name "requirements*.txt" -o -name "setup.sh" \) -not -path "*/.git/*" 2>/dev/null | sort)
     echo "" >> "$md_file"
 
@@ -138,7 +196,7 @@ for REPO_URL in "$@"; do
     local ai_tool=$1
     local md_file="REVIEW_${ai_tool}.md"
     common_structure "$md_file"
-    echo "## 2. $ai_tool 상세 분석" >> "$md_file"
+    echo "## 3. $ai_tool 상세 분석" >> "$md_file"
     # 항상 로컬 상세 분석 먼저 추가 (구성요소별·파일별 기능 목록)
     local_detail_analysis "$md_file"
 
@@ -214,7 +272,7 @@ $structure_ctx
     local addon="${2:-review_addon}"
     mkdir -p "$addon"/dist "$addon"/security "$addon"/ci-cd "$addon"/monitoring "$addon"/docs
 
-    echo "## 3. 개선 addon ($addon)" >> "$rfile"
+    echo "## 4. 개선 addon ($addon)" >> "$rfile"
 
     if [ ! -f docker-compose.yml ]; then
       cat > "$addon/dist/docker-compose.prod.yml" << 'DOCPROD'
