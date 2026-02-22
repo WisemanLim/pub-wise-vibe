@@ -24,6 +24,9 @@ run_setup_vibe() {
   [ -f "$VIBE_DIR/share/.env.example" ] && safe_load_env "$VIBE_DIR/share/.env.example"
   [ -f "$ENV_FILE" ] && safe_load_env "$ENV_FILE" && echo ".env 로드됨"
 
+  # stdin이 파이프여도 터미널이 있으면 /dev/tty로 읽기 (Cursor 등 통합 터미널 대응)
+  [ ! -t 0 ] && [ -e /dev/tty ] && exec 0</dev/tty
+
   echo "=== 바이브 코딩 서비스 선택 (MacOS) ==="
   echo "1. Gemini CLI"
   echo "2. Claude Code"
