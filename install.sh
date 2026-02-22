@@ -172,12 +172,16 @@ curl -fsSL "$BASE_URL/.env.example" -o "$VIBE_DIR/share/.env.example"
 curl -fsSL "$BASE_URL/review_source.sh" -o "$VIBE_DIR/share/review_source.sh"
 chmod +x "$VIBE_DIR/share/review_source.sh"
 
-# setup_vibe: 원격 install.sh를 임시 파일로 받아 실행 (stdin=터미널 유지로 read 입력 가능)
+# setup_vibe: 원격 install.sh를 임시 파일로 받아 실행 (stdin=/dev/tty 로 read 입력 보장)
 cat > "$VIBE_DIR/bin/setup_vibe" << SETUPVIBE
 #!/bin/bash
 BASE_URL="$BASE_URL"
 TMP_SCRIPT="\${TMPDIR:-/tmp}/wise_vibe_install_\$\$.sh"
-curl -fsSL "\${BASE_URL}/install.sh" -o "\$TMP_SCRIPT" && bash "\$TMP_SCRIPT" setup_vibe
+if ! curl -fsSL "\${BASE_URL}/install.sh" -o "\$TMP_SCRIPT"; then
+  echo "오류: install.sh 다운로드 실패. 네트워크 또는 URL 확인 후 재시도하세요."
+  exit 1
+fi
+bash "\$TMP_SCRIPT" setup_vibe < /dev/tty
 rm -f "\$TMP_SCRIPT"
 SETUPVIBE
 chmod +x "$VIBE_DIR/bin/setup_vibe"
