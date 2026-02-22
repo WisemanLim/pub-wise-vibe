@@ -75,8 +75,8 @@ run_setup_vibe() {
       echo "추가 정보 (프록시 등):"
       read -r additional_info
       npm install -g @google/gemini-cli || echo "npm 에러: brew install node"
-      echo "테스트: Hi"
-      gemini "Hi" --model "${GEMINI_MODEL:-gemini-2.0-pro-exp}" || true
+      echo "테스트: 단일 메시지 (헤드리스)"
+      gemini "Say OK in one word." --model "${GEMINI_MODEL:-gemini-2.0-pro-exp}" < /dev/null || true
       ;;
     2)
       service="Claude Code"
@@ -86,8 +86,8 @@ run_setup_vibe() {
       echo "추가 정보:"
       read -r additional_info
       npm install -g @anthropic-ai/claude-code || echo "npm 에러"
-      echo "테스트: Hi"
-      claude "Hi" || true
+      echo "테스트: 단일 메시지 (원샷)"
+      claude -p "Say OK in one word." || true
       ;;
     3)
       service="Continue + Ollama"
