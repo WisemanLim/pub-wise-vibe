@@ -8,8 +8,18 @@ set -e
 VIBE_DIR="${HOME}/.wise_vibe"
 ENV_FILE="${ENV_FILE:-.env}"
 
-[ -f "$VIBE_DIR/share/.env.example" ] && source "$VIBE_DIR/share/.env.example" 2>/dev/null || true
-[ -f "$ENV_FILE" ] && source "$ENV_FILE" 2>/dev/null && echo ".env 로드됨" || true
+# source 대신 KEY=value만 적용 (공백·명령 해석으로 인한 조기 종료 방지)
+safe_load_env() {
+  local f="$1"
+  [ ! -f "$f" ] && return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}" ; line="${line%%$'\r'}" ; line="${line#"${line%%[![:space:]]*}"}" ; line="${line%"${line##*[![:space:]]}"}"
+    [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] && export "$line" || true
+  done < "$f"
+}
+
+[ -f "$VIBE_DIR/share/.env.example" ] && safe_load_env "$VIBE_DIR/share/.env.example"
+[ -f "$ENV_FILE" ] && safe_load_env "$ENV_FILE" && echo ".env 로드됨"
 
 echo "=== 바이브 코딩 서비스 선택 (MacOS) ==="
 echo "1. Gemini CLI"
@@ -17,7 +27,12 @@ echo "2. Claude Code"
 echo "3. Continue + Ollama"
 echo "4. Cursor (IDE)"
 echo "5. Cline"
-read -p "선택 (1-5): " choice
+if [ ! -t 0 ]; then
+  echo "이 스크립트는 대화형 터미널에서 실행하세요. (stdin이 TTY가 아님)"
+  exit 0
+fi
+read -p "선택 (1-5): " choice || true
+[ -z "$choice" ] && choice=4
 save_env=1
 additional_info=""
 service=""
