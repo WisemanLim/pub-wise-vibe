@@ -8,14 +8,10 @@ set -e
 
 VIBE_DIR="${HOME}/.wise_vibe"
 
-# curl | bash 로 실행 시 stdin이 파이프이므로 확인 입력을 터미널에서 받기
-if [ ! -t 0 ] && [ -e /dev/tty ]; then
-  exec 0</dev/tty
-fi
-
-# -y / --yes: 확인 없이 바로 제거
+# 확인 생략: -y/--yes 인자 또는 stdin이 파이프( curl | bash )인 경우 → 대기 없이 바로 제거
 SKIP_CONFIRM=false
 [ "$1" = "-y" ] || [ "$1" = "--yes" ] && SKIP_CONFIRM=true
+[ ! -t 0 ] && SKIP_CONFIRM=true
 
 echo "=== Wise Vibe 환경 초기화 (uninstall) ==="
 echo "제거 대상:"
