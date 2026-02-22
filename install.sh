@@ -12,8 +12,7 @@ VIBE_DIR="${HOME}/.wise_vibe"
 # ========== setup_vibe 모드: 원격에서 curl로 호출 시 $1 == "setup_vibe" ==========
 if [ "$1" = "setup_vibe" ]; then
   shift
-  # curl | bash 로 실행 시 stdin이 파이프이므로 read가 동작하도록 터미널에서 입력받기
-  if [ ! -t 0 ]; then exec 0</dev/tty; fi
+  # stdin은 launcher(setup_vibe)에서 bash ... < /dev/tty 로 전달됨. exec 0</dev/tty 사용 시 일부 환경에서 실패해 종료되므로 제거
   ENV_FILE="${ENV_FILE:-.env}"
   [ -f "$VIBE_DIR/share/.env.example" ] && source "$VIBE_DIR/share/.env.example" 2>/dev/null || true
   [ -f "$ENV_FILE" ] && source "$ENV_FILE" 2>/dev/null && echo ".env 로드됨" || true
