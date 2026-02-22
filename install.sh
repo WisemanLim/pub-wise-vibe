@@ -227,3 +227,4 @@ run_setup_vibe || true
 if [ ! -t 0 ]; then
   echo "바이브 환경 구성(서비스 선택 1~5)을 하려면: source ~/.zshrc && setup_vibe"
 fi
+exit 0
