@@ -6,6 +6,11 @@
 
 set -e
 
+# 프로젝트 .env 로드 후 자식 프로세스(AI CLI)에 전달되도록 export
+[ -f ".env" ] && source .env 2>/dev/null || true
+[ -f "$HOME/.wise_vibe/share/.env.example" ] && source "$HOME/.wise_vibe/share/.env.example" 2>/dev/null || true
+export GEMINI_API_KEY GEMINI_MODEL ANTHROPIC_API_KEY CLAUDE_MODEL 2>/dev/null || true
+
 if [ $# -lt 1 ]; then
   echo "사용: $0 <github_url1> [url2 ...]"
   exit 1
@@ -48,10 +53,85 @@ for REPO_URL in "$@"; do
     echo "# $REPO_NAME 리뷰 [$(date)]" > "$f"
     echo "## 1. 구조 다이어그램" >> "$f"
     tree -L 3 -I 'node_modules|.git|review_*' >> "$f" 2>/dev/null || find . -maxdepth 3 -not -path '*/node_modules/*' -not -path '*/.git/*' | head -80 >> "$f"
+    echo "" >> "$f"
     echo "## 구성 요소" >> "$f"
     echo "- FE: $(find . \( -name "*.jsx" -o -name "*.tsx" -o -name "*.vue" -o -name "*.html" \) 2>/dev/null | wc -l | tr -d ' ') 파일" >> "$f"
     echo "- BE: $(find . \( -name "*.py" -o -name "*.js" -o -name "*.go" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d ' ') 파일" >> "$f"
     echo "- DB/설치: $(find . -name "*.sql" -o -name "Dockerfile" -o -name "package*.json" 2>/dev/null | wc -l | tr -d ' ') 파일" >> "$f"
+  }
+
+  # 구조 문자열 생성 (AI 프롬프트·로컬 분석용)
+  build_structure_context() {
+    echo "=== 저장소 트리 ==="
+    tree -L 3 -I 'node_modules|.git|review_*' 2>/dev/null || find . -maxdepth 3 -not -path '*/node_modules/*' -not -path '*/.git/*' | head -80
+    echo ""
+    echo "=== FE 파일 ==="
+    find . \( -name "*.jsx" -o -name "*.tsx" -o -name "*.vue" -o -name "*.html" \) -not -path "*/.git/*" 2>/dev/null | sed 's|^\./||'
+    echo ""
+    echo "=== BE 파일 ==="
+    find . \( -name "*.py" -o -name "*.js" -o -name "*.go" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | sed 's|^\./||'
+    echo ""
+    echo "=== DB/설치 관련 ==="
+    find . \( -name "*.sql" -o -name "Dockerfile" -o -name "package*.json" -o -name "requirements*.txt" -o -name "setup.sh" \) -not -path "*/.git/*" 2>/dev/null | sed 's|^\./||'
+  }
+
+  # 구성요소별·파일별 상세 분석 (함수/클래스 목록 등) — AI 실패 시 또는 보강용
+  local_detail_analysis() {
+    local md_file="$1"
+    echo "" >> "$md_file"
+    echo "### 구성요소별 파일·기능 목록" >> "$md_file"
+    echo "" >> "$md_file"
+
+    # FE
+    echo "#### FE (프론트엔드)" >> "$md_file"
+    while IFS= read -r f; do
+      [ -f "$f" ] || continue
+      echo "- **\`$f\`**" >> "$md_file"
+      case "$f" in
+        *.html)
+          grep -nE '<script|</script>|router\.|path\(|route\(' "$f" 2>/dev/null | head -15 | sed 's/^/  - /' >> "$md_file" || true
+          ;;
+        *.js|*.jsx|*.tsx|*.vue)
+          grep -nE '^(export )?(function |const |class )|^  (async )?[a-zA-Z]+ *\(' "$f" 2>/dev/null | head -25 | sed 's/^/  - /' >> "$md_file" || true
+          ;;
+        *) echo "  - (파일)" >> "$md_file" ;;
+      esac
+      echo "" >> "$md_file"
+    done < <(find . \( -name "*.html" -o -name "*.jsx" -o -name "*.tsx" -o -name "*.vue" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | sort)
+    echo "" >> "$md_file"
+
+    # BE
+    echo "#### BE (백엔드)" >> "$md_file"
+    while IFS= read -r f; do
+      [ -f "$f" ] || continue
+      echo "- **\`$f\`**" >> "$md_file"
+      case "$f" in
+        *.py)
+          grep -nE '^(def |class |async def )' "$f" 2>/dev/null | sed 's/^/  - /' >> "$md_file" || true
+          ;;
+        *.js)
+          grep -nE '^(export )?(function |const |class )|(get|post|put|delete)\s*\(' "$f" 2>/dev/null | head -25 | sed 's/^/  - /' >> "$md_file" || true
+          ;;
+        *.go)
+          grep -nE '^func |^type .* struct' "$f" 2>/dev/null | sed 's/^/  - /' >> "$md_file" || true
+          ;;
+        *) echo "  - (파일)" >> "$md_file" ;;
+      esac
+      echo "" >> "$md_file"
+    done < <(find . \( -name "*.py" -o -name "*.js" -o -name "*.go" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | sort)
+    echo "" >> "$md_file"
+
+    # DB/설치
+    echo "#### DB/설치" >> "$md_file"
+    while IFS= read -r f; do
+      [ -f "$f" ] || continue
+      echo "- **\`$f\`** ($(wc -l < "$f" 2>/dev/null | tr -d ' ') 줄)" >> "$md_file"
+    done < <(find . \( -name "*.sql" -o -name "Dockerfile" -o -name "package*.json" -o -name "requirements*.txt" -o -name "setup.sh" \) -not -path "*/.git/*" 2>/dev/null | sort)
+    echo "" >> "$md_file"
+
+    echo "### BE API·엔드포인트 후보" >> "$md_file"
+    grep -rnE "(@app\.(route|get|post|put|delete)|app\.(get|post|put|delete)|router\.(get|post)|path\s*=\s*['\"]|url_for|/api/)" . --include="*.py" --include="*.js" --include="*.go" 2>/dev/null | grep -v node_modules | head -40 | sed 's/^/  - /' >> "$md_file" || true
+    echo "" >> "$md_file"
   }
 
   run_ai_review() {
@@ -59,14 +139,58 @@ for REPO_URL in "$@"; do
     local md_file="REVIEW_${ai_tool}.md"
     common_structure "$md_file"
     echo "## 2. $ai_tool 상세 분석" >> "$md_file"
-    local prompt="분석: $(pwd)
-1. 구조 요약 (FE/BE/DB 관계 텍스트 다이어그램).
-2. 디렉토리별: 파일/기능/호출 관계.
-3. BE API: curl 예제.
-4. 총론: 개요/부족점(보안/HTTPS/Docker)/개선 코드.
-한국어 Markdown."
-    echo "[$ai_tool] 분석 중..."
-    $ai_tool "$prompt" >> "$md_file" 2>/dev/null || echo "(AI CLI 미설치 또는 오류 - 수동 분석 권장)" >> "$md_file"
+    # 항상 로컬 상세 분석 먼저 추가 (구성요소별·파일별 기능 목록)
+    local_detail_analysis "$md_file"
+
+    local structure_ctx
+    structure_ctx=$(build_structure_context)
+    local prompt="다음은 저장소 구조와 파일 목록입니다:
+
+$structure_ctx
+
+위 구조를 바탕으로 아래를 한국어 Markdown으로 작성해 주세요.
+1. 구조 요약: FE/BE/DB 관계 텍스트 다이어그램.
+2. 디렉토리별: 파일 역할, 기능, 호출 관계.
+3. BE API: curl 호출 예제.
+4. 총론: 개요, 부족점(보안/HTTPS/Docker), 개선 권고."
+
+    echo "[$ai_tool] AI 분석 중..."
+    local err_log
+    err_log=$(mktemp 2>/dev/null || echo "/tmp/review_$$.err")
+    if [ "$ai_tool" = "gemini" ]; then
+      # 긴 프롬프트는 파일로 전달(인자/파이프 한계 회피), 헤드리스로 실행
+      local prompt_file
+      prompt_file=$(mktemp 2>/dev/null || echo "/tmp/review_prompt_$$.txt")
+      printf '%s' "$prompt" > "$prompt_file"
+      if ( gemini --model "${GEMINI_MODEL:-gemini-2.5-flash}" < "$prompt_file" 2>"$err_log" ) >> "$md_file"; then
+        :
+      else
+        echo "" >> "$md_file"
+        echo "(Gemini CLI 오류: $(head -1 "$err_log" 2>/dev/null | sed 's/^[[:space:]]*//' | head -c 120))" >> "$md_file"
+      fi
+      rm -f "$prompt_file"
+    elif [ "$ai_tool" = "claude" ]; then
+      # Claude: 긴 내용은 stdin, 지시문만 -p (명령줄 길이 한계 회피)
+      local prompt_file
+      prompt_file=$(mktemp 2>/dev/null || echo "/tmp/review_prompt_$$.txt")
+      printf '%s' "$prompt" > "$prompt_file"
+      local claude_instruction="위 stdin의 저장소 구조를 분석해 주세요. 1. 구조 요약(FE/BE/DB) 2. 디렉토리별 파일/기능/호출관계 3. BE API curl 예제 4. 총론(부족점/개선). 한국어 Markdown."
+      if ( cat "$prompt_file" | claude -p "$claude_instruction" 2>"$err_log" ) >> "$md_file"; then
+        :
+      else
+        echo "" >> "$md_file"
+        echo "(Claude CLI 오류: $(head -1 "$err_log" 2>/dev/null | sed 's/^[[:space:]]*//' | head -c 120))" >> "$md_file"
+      fi
+      rm -f "$prompt_file"
+    else
+      if ( printf '%s' "$prompt" | $ai_tool 2>"$err_log" ) >> "$md_file"; then
+        :
+      else
+        echo "" >> "$md_file"
+        echo "(AI CLI 오류: $(head -1 "$err_log" 2>/dev/null | sed 's/^[[:space:]]*//' | head -c 120))" >> "$md_file"
+      fi
+    fi
+    rm -f "$err_log"
     echo "[$ai_tool] 완료: $md_file"
   }
 
