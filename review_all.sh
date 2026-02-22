@@ -52,8 +52,15 @@ fi
 echo "=== $USER 스타 저장소 리뷰 (자동 G: Gemini) ==="
 urls=$(get_starred_urls)
 count=0
+skipped=0
 for url in $urls; do
   [ -z "$url" ] && continue
+  repo_name=$(basename "$url" .git)
+  if [ -d "$repo_name" ] && [ -f "$repo_name/REVIEW.md" ]; then
+    echo "[skip] $repo_name (클론·REVIEW.md 있음)"
+    skipped=$((skipped + 1))
+    continue
+  fi
   count=$((count + 1))
   echo ""
   echo "[$count] $url"
@@ -61,4 +68,4 @@ for url in $urls; do
 done
 
 echo ""
-echo "완료: ${count}개 저장소 리뷰"
+echo "완료: ${count}개 리뷰 진행, ${skipped}개 스킵 (이미 REVIEW.md 있음)"
