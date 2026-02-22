@@ -44,10 +44,12 @@ run_setup_vibe() {
   additional_info=""
   service=""
 
+  strip_quotes() { local v="$1"; v="${v#\"}"; v="${v%\"}"; echo "$v"; }
   check_env_and_prompt() {
     local var_name=$1
     local prompt_msg=$2
     local default_value="${!var_name:-}"
+    default_value="$(strip_quotes "$default_value")"
     if [ -n "$default_value" ] && [[ "$default_value" != your_* ]]; then
       echo "$prompt_msg (현재: $default_value)"
       read -p "사용 (Y/N, 기본 Y)? " use_default
@@ -58,6 +60,7 @@ run_setup_vibe() {
       fi
     fi
     read -p "$prompt_msg: " value
+    value="$(strip_quotes "$value")"
     if [ -n "$value" ]; then
       export "$var_name=$value"
       echo "$var_name=\"$value\"" >> "$ENV_FILE.temp"
@@ -76,7 +79,8 @@ run_setup_vibe() {
       read -r additional_info
       npm install -g @google/gemini-cli || echo "npm 에러: brew install node"
       echo "테스트: 단일 메시지 (헤드리스)"
-      gemini "Say OK in one word." --model "${GEMINI_MODEL:-gemini-2.0-pro-exp}" < /dev/null || true
+      model="$(strip_quotes "${GEMINI_MODEL:-gemini-2.0-pro-exp}")"
+      ( gemini "Say OK in one word." --model "$model" < /dev/null ) 2>/dev/null || true
       ;;
     2)
       service="Claude Code"
@@ -87,7 +91,7 @@ run_setup_vibe() {
       read -r additional_info
       npm install -g @anthropic-ai/claude-code || echo "npm 에러"
       echo "테스트: 단일 메시지 (원샷)"
-      claude -p "Say OK in one word." || true
+      ( claude -p "Say OK in one word." ) 2>/dev/null || true
       ;;
     3)
       service="Continue + Ollama"
