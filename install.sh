@@ -12,9 +12,11 @@ VIBE_DIR="${HOME}/.wise_vibe"
 # ========== setup_vibe 모드: 원격에서 curl로 호출 시 $1 == "setup_vibe" ==========
 if [ "$1" = "setup_vibe" ]; then
   shift
+  # curl | bash 로 실행 시 stdin이 파이프이므로 read가 동작하도록 터미널에서 입력받기
+  if [ ! -t 0 ]; then exec 0</dev/tty; fi
   ENV_FILE="${ENV_FILE:-.env}"
   [ -f "$VIBE_DIR/share/.env.example" ] && source "$VIBE_DIR/share/.env.example" 2>/dev/null || true
-  [ -f "$ENV_FILE" ] && source "$ENV_FILE" 2>/dev/null && echo ".env 로드됨"
+  [ -f "$ENV_FILE" ] && source "$ENV_FILE" 2>/dev/null && echo ".env 로드됨" || true
 
   echo "=== 바이브 코딩 서비스 선택 (MacOS) ==="
   echo "1. Gemini CLI"
