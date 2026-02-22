@@ -15,7 +15,7 @@ SKIP_CONFIRM=false
 
 echo "=== Wise Vibe 환경 초기화 (uninstall) ==="
 echo "제거 대상:"
-echo "  - $VIBE_DIR (전체 디렉터리)"
+echo "  - $VIBE_DIR (전체: .env.example, setup_vibe.sh, review_source.sh, bin 링크 등)"
 echo "  - 셸 프로파일(.zshrc, .bash_profile, .bashrc) 내 wise_vibe PATH 한 줄"
 echo ""
 echo "※ Homebrew, Node, tree, Gemini/Claude CLI 등은 제거하지 않습니다."
