@@ -1,28 +1,39 @@
 #!/bin/bash
 # uninstall.sh - Wise Vibe 설치 환경 초기화
 # 실행: curl -fsSL https://raw.githubusercontent.com/WisemanLim/pub-wise-vibe/refs/heads/main/uninstall.sh | bash
-# Wiseman Lim (Seoul, bio-healthcare)
+# 비대화형(확인 생략): curl ... | bash -s -- -y
+# ※ 제거 대상: ~/.wise_vibe 및 셸 프로파일 내 PATH 한 줄만. Homebrew/Node 등은 제거하지 않습니다.
 
 set -e
 
 VIBE_DIR="${HOME}/.wise_vibe"
 
+# curl | bash 로 실행 시 stdin이 파이프이므로 확인 입력을 터미널에서 받기
+if [ ! -t 0 ] && [ -e /dev/tty ]; then
+  exec 0</dev/tty
+fi
+
+# -y / --yes: 확인 없이 바로 제거
+SKIP_CONFIRM=false
+[ "$1" = "-y" ] || [ "$1" = "--yes" ] && SKIP_CONFIRM=true
+
 echo "=== Wise Vibe 환경 초기화 (uninstall) ==="
-echo "다음 항목이 제거됩니다:"
+echo "제거 대상:"
 echo "  - $VIBE_DIR (전체 디렉터리)"
 echo "  - 셸 프로파일(.zshrc, .bash_profile, .bashrc) 내 wise_vibe PATH 한 줄"
 echo ""
 echo "※ Homebrew, Node, tree, Gemini/Claude CLI 등은 제거하지 않습니다."
-read -p "계속하시겠습니까? (y/N): " confirm
 
-case "$confirm" in
-  [yY]|[yY][eE][sS])
-    ;;
-  *)
-    echo "취소되었습니다."
-    exit 0
-    ;;
-esac
+if [ "$SKIP_CONFIRM" = false ]; then
+  read -p "계속하시겠습니까? (y/N): " confirm
+  case "$confirm" in
+    [yY]|[yY][eE][sS]) ;;
+    *)
+      echo "취소되었습니다."
+      exit 0
+      ;;
+  esac
+fi
 
 # 1. ~/.wise_vibe 삭제
 if [ -d "$VIBE_DIR" ]; then

@@ -38,8 +38,11 @@ curl -fsSL https://raw.githubusercontent.com/WisemanLim/pub-wise-vibe/refs/heads
 curl -fsSL https://raw.githubusercontent.com/WisemanLim/pub-wise-vibe/refs/heads/main/uninstall.sh | bash
 ```
 
-- 실행 시 "계속하시겠습니까? (y/N):" 에서 **y** 입력 후 엔터하면 초기화가 진행됩니다.
+- 실행 시 "계속하시겠습니까? (y/N):" 에서 **y** 입력 후 엔터하면 초기화가 진행됩니다. (curl 파이프 실행 시에도 터미널에서 입력받도록 처리됨)
+- 확인 없이 제거하려면: `curl -fsSL .../uninstall.sh | bash -s -- -y`
 - 완료 후 새 터미널을 열거나 `source ~/.zshrc`(또는 `source ~/.bash_profile`)를 실행해 PATH 변경을 반영하세요.
+
+**참고**: `setup_vibe` 실행 후 메뉴/입력이 전혀 나오지 않으면, 설치 스크립트를 한 번 더 실행한 뒤 다시 `setup_vibe`를 시도하세요. (설치 시 생성되는 `setup_vibe` 스크립트가 갱신됩니다.)
 
 ### 3. 셸 반영 후 바이브 환경 구성
 
