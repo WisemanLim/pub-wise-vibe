@@ -50,7 +50,8 @@ source ~/.zshrc   # 또는 source ~/.bash_profile
 setup_vibe
 ```
 
-`setup_vibe` 실행 시 로컬 `setup_vibe.sh` 가 실행되어 1~5번 서비스 선택, API 키·추가 정보 입력, 'Hi' 테스트, `.env` 저장까지 진행합니다.
+- **실행 명령**: `setup_vibe` (PATH에 등록된 이름). `setup_vibe.sh` 는 PATH에 없으므로 직접 입력하면 command not found 가 납니다.
+- `setup_vibe` 실행 시 로컬 `~/.wise_vibe/share/setup_vibe.sh` 가 실행되어 1~5번 서비스 선택, API 키·추가 정보 입력, 'Hi' 테스트, `.env` 저장까지 진행합니다.
 
 ---
 

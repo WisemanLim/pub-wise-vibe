@@ -18,8 +18,17 @@ curl -fsSL "$BASE_URL/setup_vibe.sh" -o "$VIBE_DIR/share/setup_vibe.sh"
 chmod +x "$VIBE_DIR/share/review_source.sh"
 chmod +x "$VIBE_DIR/share/setup_vibe.sh"
 
-# setup_vibe: 로컬 setup_vibe.sh 실행 (파이프 없이 실행되어 read 입력 정상 동작)
-ln -sf "$VIBE_DIR/share/setup_vibe.sh" "$VIBE_DIR/bin/setup_vibe"
+# setup_vibe: 로컬 setup_vibe.sh를 bash로 실행 (symlink 대신 래퍼로 실행 보장)
+cat > "$VIBE_DIR/bin/setup_vibe" << SETUPWRAP
+#!/bin/bash
+V="\$HOME/.wise_vibe/share/setup_vibe.sh"
+if [ ! -f "\$V" ]; then
+  echo "오류: setup_vibe.sh 없음. 설치를 다시 실행하세요: curl -fsSL https://raw.githubusercontent.com/WisemanLim/pub-wise-vibe/refs/heads/main/install.sh | bash"
+  exit 1
+fi
+exec bash "\$V"
+SETUPWRAP
+chmod +x "$VIBE_DIR/bin/setup_vibe"
 ln -sf "$VIBE_DIR/share/review_source.sh" "$VIBE_DIR/bin/review_source" 2>/dev/null || true
 
 for profile in .zshrc .bash_profile .bashrc; do
