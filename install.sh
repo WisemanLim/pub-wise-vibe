@@ -227,7 +227,8 @@ command -v node >/dev/null 2>&1 || (command -v brew >/dev/null 2>&1 && brew inst
 command -v tree >/dev/null 2>&1 || (command -v brew >/dev/null 2>&1 && brew install tree 2>/dev/null || true)
 
 echo "✅ 설치 완료. 로컬 보관: .env.example, review_source.sh, install.sh"
-run_setup_vibe || true
+# 서브쉘에서 실행해 부모의 stdin을 파이프로 유지 → curl|bash 후 정상 종료
+( run_setup_vibe ) || true
 if [ ! -t 0 ]; then
   echo "바이브 환경 구성(서비스 선택 1~5)을 하려면: source ~/.zshrc && setup_vibe"
 fi
