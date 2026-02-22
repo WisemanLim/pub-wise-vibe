@@ -7,3 +7,13 @@ node_modules
 # Generated files
 .psci
 output
+
+# Environment (API keys)
+.env
+.env.local
+.env.*.local
+
+# Custom files
+.DS_Store
+.idea
+.vscode
