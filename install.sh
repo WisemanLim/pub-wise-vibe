@@ -32,6 +32,7 @@ run_setup_vibe() {
   echo "5. Cline"
   if [ ! -t 0 ]; then
     echo "이 스크립트는 대화형 터미널에서 실행하세요. (stdin이 TTY가 아님)"
+    echo "다음 명령으로 서비스 선택을 진행하세요: source ~/.zshrc && setup_vibe"
     return 0
   fi
   read -p "선택 (1-5): " choice || true
@@ -186,12 +187,19 @@ mkdir -p "$VIBE_DIR"/bin "$VIBE_DIR"/share
 
 curl -fsSL "$BASE_URL/.env.example" -o "$VIBE_DIR/share/.env.example"
 curl -fsSL "$BASE_URL/review_source.sh" -o "$VIBE_DIR/share/review_source.sh"
+curl -fsSL "$BASE_URL/install.sh" -o "$VIBE_DIR/share/install.sh"
 chmod +x "$VIBE_DIR/share/review_source.sh"
+chmod +x "$VIBE_DIR/share/install.sh"
 
-# setup_vibe: 원격 install.sh --setup 실행 (단일 파일로 통합)
-cat > "$VIBE_DIR/bin/setup_vibe" << 'SETUPWRAP'
+# setup_vibe: 로컬 install.sh --setup 실행 (stdin이 TTY로 유지됨)
+cat > "$VIBE_DIR/bin/setup_vibe" << SETUPWRAP
 #!/bin/bash
-exec bash -c 'curl -fsSL https://raw.githubusercontent.com/WisemanLim/pub-wise-vibe/refs/heads/main/install.sh | bash -s -- --setup'
+V="\$HOME/.wise_vibe/share/install.sh"
+if [ ! -f "\$V" ]; then
+  echo "오류: 설치를 다시 실행하세요. curl -fsSL https://raw.githubusercontent.com/WisemanLim/pub-wise-vibe/refs/heads/main/install.sh | bash"
+  exit 1
+fi
+exec bash "\$V" --setup
 SETUPWRAP
 chmod +x "$VIBE_DIR/bin/setup_vibe"
 ln -sf "$VIBE_DIR/share/review_source.sh" "$VIBE_DIR/bin/review_source" 2>/dev/null || true
@@ -211,6 +219,8 @@ fi
 command -v node >/dev/null 2>&1 || (command -v brew >/dev/null 2>&1 && brew install node 2>/dev/null || true)
 command -v tree >/dev/null 2>&1 || (command -v brew >/dev/null 2>&1 && brew install tree 2>/dev/null || true)
 
-echo "✅ 설치 완료. 로컬 보관: .env.example, review_source.sh"
-echo "바이브 환경 구성 (서비스 선택 1~5)을 시작합니다."
-run_setup_vibe
+echo "✅ 설치 완료. 로컬 보관: .env.example, review_source.sh, install.sh"
+run_setup_vibe || true
+if [ ! -t 0 ]; then
+  echo "바이브 환경 구성(서비스 선택 1~5)을 하려면: source ~/.zshrc && setup_vibe"
+fi
