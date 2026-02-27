@@ -39,7 +39,8 @@ for REPO_URL in "$@"; do
   command -v gemini >/dev/null 2>&1 && echo "G) Gemini CLI ✓" || echo "G) Gemini CLI ✗"
   command -v claude >/dev/null 2>&1 && echo "C) Claude Code ✓" || echo "C) Claude Code ✗"
   echo "B) Both (비교)"
-  read -p "선택 (G/C/B): " ai_choice
+  read -p "선택 (G/C/B) [기본: G]: " ai_choice
+  ai_choice=${ai_choice:-G}
 
   case "$ai_choice" in
     [Gg]*) AI_TOOLS=(gemini) ;;

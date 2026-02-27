@@ -50,20 +50,42 @@ else
 fi
 
 echo "=== $USER 스타 저장소 리뷰 (자동 G: Gemini) ==="
-urls=$(get_starred_urls)
+urls=()
+while IFS= read -r u; do
+  [ -n "$u" ] && urls+=("$u")
+done < <(get_starred_urls)
+total=${#urls[@]}
+echo "전체 스타 저장소: ${total}개 (1 ~ ${total})"
+read -p "시작 번호 (0 또는 비우면 전체): " start_input
+read -p "끝 번호 (비우면 마지막까지): " end_input
+start_num=${start_input:-0}
+end_num=${end_input:-$total}
+if [ -z "$start_input" ] || [ "$start_num" -eq 0 ]; then
+  start=1
+  end=$total
+  echo "범위: 1 ~ ${total} (전체)"
+else
+  start=$start_num
+  end=${end_num:-$total}
+  [ "$end" -lt "$start" ] && end=$start
+  echo "범위: ${start} ~ ${end}"
+fi
+
 count=0
 skipped=0
-for url in $urls; do
-  [ -z "$url" ] && continue
+for i in "${!urls[@]}"; do
+  num=$((i + 1))
+  [ "$num" -lt "$start" ] || [ "$num" -gt "$end" ] && continue
+  url="${urls[$i]}"
   repo_name=$(basename "$url" .git)
   if [ -d "$repo_name" ] && [ -f "$repo_name/REVIEW.md" ]; then
-    echo "[skip] $repo_name (클론·REVIEW.md 있음)"
+    echo "[skip] #${num} $repo_name (클론·REVIEW.md 있음)"
     skipped=$((skipped + 1))
     continue
   fi
   count=$((count + 1))
   echo ""
-  echo "[$count] $url"
+  echo "[#${num}/${total}] $url"
   printf 'G\n' | review_source "$url" || true
 done
 
