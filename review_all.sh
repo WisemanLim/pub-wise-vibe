@@ -25,17 +25,18 @@ if command -v jq >/dev/null 2>&1; then
       else
         json=$(curl -s "${API_URL}?per_page=${PER_PAGE}&page=${page}")
       fi
+      local len
+      len=$(echo "$json" | jq 'length' 2>/dev/null || echo 0)
       echo "$json" | jq -r '.[].clone_url' 2>/dev/null | grep -E '^https://' || true
-      [ "$(echo "$json" | jq 'length')" -lt "$PER_PAGE" ] 2>/dev/null && break
+      [ "$len" -lt "$PER_PAGE" ] && break
       page=$((page + 1))
-      [ "$page" -gt 10 ] && break
     done
   }
 else
   echo "jq가 없습니다. 설치 권장: brew install jq (또는 GITHUB_TOKEN 없이 간단 파싱 시도)"
   get_starred_urls() {
     local page=1
-    while [ "$page" -le 5 ]; do
+    while true; do
       local raw
       if [ -n "$GITHUB_TOKEN" ]; then
         raw=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "${API_URL}?per_page=${PER_PAGE}&page=${page}")
@@ -44,12 +45,13 @@ else
       fi
       echo "$raw" | grep -oE '"clone_url"[[:space:]]*:[[:space:]]*"https://[^"]+"' | sed 's/.*"https:\/\//https:\/\//;s/"$//'
       echo "$raw" | grep -q '"clone_url"' || break
+      [ "$(echo "$raw" | grep -c '"clone_url"' 2>/dev/null || echo 0)" -lt "$PER_PAGE" ] && break
       page=$((page + 1))
     done
   }
 fi
 
-echo "=== $USER 스타 저장소 리뷰 (자동 G: Gemini) ==="
+echo "=== $USER 스타 저장소 리뷰 ==="
 urls=()
 while IFS= read -r u; do
   [ -n "$u" ] && urls+=("$u")
@@ -71,6 +73,11 @@ else
   echo "범위: ${start} ~ ${end}"
 fi
 
+echo ""
+echo "G) Gemini  C) Claude  B) Both  S) SKIP (clone만)"
+read -p "선택 (G/C/B/S) [기본: G]: " ai_choice
+ai_choice=${ai_choice:-G}
+
 SOURCES_DIR="_sources"
 mkdir -p "$SOURCES_DIR"
 count=0
@@ -88,7 +95,7 @@ for i in "${!urls[@]}"; do
   count=$((count + 1))
   echo ""
   echo "[#${num}/${total}] $url"
-  ( cd "$SOURCES_DIR" && printf 'G\n' | review_source "$url" ) || true
+  ( cd "$SOURCES_DIR" && printf '%s\n' "$ai_choice" | review_source "$url" ) || true
 done
 
 echo ""
