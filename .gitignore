@@ -17,3 +17,6 @@ output
 .DS_Store
 .idea
 .vscode
+
+# List files
+*.list

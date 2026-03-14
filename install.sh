@@ -194,8 +194,10 @@ mkdir -p "$VIBE_DIR"/bin "$VIBE_DIR"/share
 
 curl -fsSL "$BASE_URL/.env.example" -o "$VIBE_DIR/share/.env.example"
 curl -fsSL "$BASE_URL/review_source.sh" -o "$VIBE_DIR/share/review_source.sh"
+curl -fsSL "$BASE_URL/get-stars.sh" -o "$VIBE_DIR/share/get-stars.sh"
 curl -fsSL "$BASE_URL/install.sh" -o "$VIBE_DIR/share/install.sh"
 chmod +x "$VIBE_DIR/share/review_source.sh"
+chmod +x "$VIBE_DIR/share/get-stars.sh"
 chmod +x "$VIBE_DIR/share/install.sh"
 
 # setup_vibe: 로컬 install.sh --setup 실행 (stdin이 TTY로 유지됨)
@@ -210,6 +212,7 @@ exec bash "\$V" --setup
 SETUPWRAP
 chmod +x "$VIBE_DIR/bin/setup_vibe"
 ln -sf "$VIBE_DIR/share/review_source.sh" "$VIBE_DIR/bin/review_source" 2>/dev/null || true
+ln -sf "$VIBE_DIR/share/get-stars.sh" "$VIBE_DIR/bin/get_stars" 2>/dev/null || true
 
 for profile in .zshrc .bash_profile .bashrc; do
   if [ -f "$HOME/$profile" ]; then
@@ -226,7 +229,7 @@ fi
 command -v node >/dev/null 2>&1 || (command -v brew >/dev/null 2>&1 && brew install node 2>/dev/null || true)
 command -v tree >/dev/null 2>&1 || (command -v brew >/dev/null 2>&1 && brew install tree 2>/dev/null || true)
 
-echo "✅ 설치 완료. 로컬 보관: .env.example, review_source.sh, install.sh"
+echo "✅ 설치 완료. 로컬 보관: .env.example, review_source.sh, get-stars.sh, install.sh"
 # 서브쉘에서 실행해 부모의 stdin을 파이프로 유지 → curl|bash 후 정상 종료
 ( run_setup_vibe ) || true
 if [ ! -t 0 ]; then

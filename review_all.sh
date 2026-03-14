@@ -53,10 +53,21 @@ fi
 
 echo "=== $USER 스타 저장소 리뷰 ==="
 urls=()
-while IFS= read -r u; do
-  [ -n "$u" ] && urls+=("$u")
-done < <(get_starred_urls)
+LIST_FILE="${USER}-stars.list"
+if [ -f "$LIST_FILE" ]; then
+  echo "목록 파일 사용: $LIST_FILE (API 조회 생략)"
+  while IFS= read -r u; do
+    u="${u%%#*}"
+    u="$(echo "$u" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [ -n "$u" ] && urls+=("$u")
+  done < "$LIST_FILE"
+else
+  while IFS= read -r u; do
+    [ -n "$u" ] && urls+=("$u")
+  done < <(get_starred_urls)
+fi
 total=${#urls[@]}
+[ "$total" -eq 0 ] && { echo "저장소 URL이 없습니다. (API 조회 또는 $LIST_FILE 내용 확인)"; exit 1; }
 echo "전체 스타 저장소: ${total}개 (1 ~ ${total})"
 read -p "시작 번호 (0 또는 비우면 전체): " start_input
 read -p "끝 번호 (비우면 마지막까지): " end_input
