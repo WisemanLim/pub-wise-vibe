@@ -35,7 +35,13 @@ get_starred_urls() {
 }
 
 echo "=== GitHub 스타 저장소 URL 가져오기: ${USER} ==="
-rm -f "$OUT_FILE"
+# rm -f "$OUT_FILE"
+if [ -f "$OUT_FILE" ]; then
+  count=$(grep -c . "$OUT_FILE" 2>/dev/null || echo 0)
+  echo "기존 파일이 있어 스킵합니다: ${OUT_FILE} (${count}개 URL)"
+  exit 0
+fi
+
 count=0
 while IFS= read -r url; do
   [ -n "$url" ] || continue
