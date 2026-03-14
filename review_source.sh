@@ -39,13 +39,16 @@ for REPO_URL in "$@"; do
   command -v gemini >/dev/null 2>&1 && echo "G) Gemini CLI ✓" || echo "G) Gemini CLI ✗"
   command -v claude >/dev/null 2>&1 && echo "C) Claude Code ✓" || echo "C) Claude Code ✗"
   echo "B) Both (비교)"
-  read -p "선택 (G/C/B) [기본: G]: " ai_choice
+  echo "S) SKIP (clone만)"
+  read -p "선택 (G/C/B/S) [기본: G]: " ai_choice
   ai_choice=${ai_choice:-G}
 
+  CLONE_ONLY=""
   case "$ai_choice" in
     [Gg]*) AI_TOOLS=(gemini) ;;
     [Cc]*) AI_TOOLS=(claude) ;;
     [Bb]*) AI_TOOLS=(gemini claude) ;;
+    [Ss]*) CLONE_ONLY=1; AI_TOOLS=() ;;
     *) AI_TOOLS=(gemini) ;;
   esac
 
@@ -253,6 +256,9 @@ $structure_ctx
     echo "[$ai_tool] 완료: $md_file"
   }
 
+  if [ -n "$CLONE_ONLY" ]; then
+    echo "✅ clone만 완료: $(pwd)"
+  else
   REVIEW_FILE="REVIEW.md"
   if [ ${#AI_TOOLS[@]} -eq 1 ]; then
     run_ai_review "${AI_TOOLS[0]}"
@@ -379,6 +385,7 @@ SECDOC
 
   echo "## 리뷰 완료" >> "$REVIEW_FILE"
   echo "✅ $(pwd)/REVIEW.md 생성 | addon: $ADDON_DIR"
+  fi
 
   cd "$START_DIR" || cd ..
 done

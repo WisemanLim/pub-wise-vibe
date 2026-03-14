@@ -71,6 +71,8 @@ else
   echo "범위: ${start} ~ ${end}"
 fi
 
+SOURCES_DIR="_sources"
+mkdir -p "$SOURCES_DIR"
 count=0
 skipped=0
 for i in "${!urls[@]}"; do
@@ -78,7 +80,7 @@ for i in "${!urls[@]}"; do
   [ "$num" -lt "$start" ] || [ "$num" -gt "$end" ] && continue
   url="${urls[$i]}"
   repo_name=$(basename "$url" .git)
-  if [ -d "$repo_name" ] && [ -f "$repo_name/REVIEW.md" ]; then
+  if [ -d "$SOURCES_DIR/$repo_name" ] && [ -f "$SOURCES_DIR/$repo_name/REVIEW.md" ]; then
     echo "[skip] #${num} $repo_name (클론·REVIEW.md 있음)"
     skipped=$((skipped + 1))
     continue
@@ -86,7 +88,7 @@ for i in "${!urls[@]}"; do
   count=$((count + 1))
   echo ""
   echo "[#${num}/${total}] $url"
-  printf 'G\n' | review_source "$url" || true
+  ( cd "$SOURCES_DIR" && printf 'G\n' | review_source "$url" ) || true
 done
 
 echo ""
